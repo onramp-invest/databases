@@ -214,9 +214,14 @@ class PostgresConnection(ConnectionBackend):
         # asyncpg uses prepared statements under the hood, so we just
         # loop through multiple executes here, which should all end up
         # using the same prepared statement.
+        args_list = []
+        query = None
         for single_query in queries:
-            single_query, args, result_columns = self._compile(single_query)
-            await self._connection.execute(single_query, *args)
+            query, args, result_columns = self._compile(single_query)
+            args_list.append(args)
+
+        if len(args_list) > 0:
+            await self._connection.executemany(query, args_list)
 
     async def iterate(
         self, query: ClauseElement
